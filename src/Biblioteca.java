@@ -12,6 +12,12 @@ public class Biblioteca {
                 "Novela","Ciencia","Historia","Infantil","Tecnico"
         };
 
+        public Biblioteca() {
+                libros = new ArrayList<>();
+                librosPorAutor = new HashMap<>();
+                codigosRegistrados = new HashSet<>();
+        }
+
         public boolean agregarlibro(Libro libro) {
 
                 if (libro == null) {
