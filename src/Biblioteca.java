@@ -57,4 +57,14 @@ public class Biblioteca {
                 }
                 return copiaLibros;
         }
+
+        public ArrayList<Libro> filtrarPorAutor(String autor) {
+                ArrayList<Libro> librosFiltrados = new ArrayList<>();
+
+                for (Libro libro : librosPorAutor.getOrDefault(autor, new ArrayList<>())) {
+                        librosFiltrados.add(libro);
+                }
+
+                return librosFiltrados;
+        }
 }
