@@ -48,4 +48,13 @@ public class Biblioteca {
                 return true;
 
         }
+
+        public ArrayList<Libro> obtenerTodos() {
+                ArrayList<Libro> copiaLibros = new ArrayList<>();
+
+                for (Libro libro : libros)  {
+                        copiaLibros.add(libro);
+                }
+                return copiaLibros;
+        }
 }
