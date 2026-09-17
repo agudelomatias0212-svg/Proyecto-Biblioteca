@@ -10,7 +10,7 @@ public class VentanaPrincipal extends JFrame {
     private JTable tablaLibros;
 
     private JTextField txtTitulo, txtAutor, txtIsbn, txtGenero, txtAno, txtCopias;
-    private JButton btnAgregar;
+    private JButton btnAgregar, btnEliminar;
 
     private JTextField txtBuscarAutor;
     private JButton btnFiltrar, btnVerTodos;
@@ -65,6 +65,10 @@ public class VentanaPrincipal extends JFrame {
         btnAgregar.addActionListener(e -> agregarLibro());
         panelBotones.add(btnAgregar);
 
+        btnEliminar = new JButton("Eliminar");
+        btnEliminar.addActionListener(e -> eliminarLibro());
+        panelBotones.add(btnEliminar);
+
         panelBotones.add(new JLabel("Buscar por autor:"));
         txtBuscarAutor = new JTextField(15);
         panelBotones.add(txtBuscarAutor);
@@ -118,6 +122,36 @@ public class VentanaPrincipal extends JFrame {
         txtCopias.setText("");
 
         txtTitulo.requestFocus();
+    }
+
+    private void eliminarLibro() {
+
+        int fila = tablaLibros.getSelectedRow();
+
+        if (fila == -1) {
+            JOptionPane.showMessageDialog(this, "Primero selecciona un libro de la tabla");
+            return;
+        }
+
+        String titulo = modeloTabla.getValueAt(fila, 0).toString();
+        String isbn = modeloTabla.getValueAt(fila, 2).toString();
+
+        int respuesta = JOptionPane.showConfirmDialog(this,
+                "Seguro que quieres eliminar: " + titulo + "?",
+                "Confirmar eliminacion",
+                JOptionPane.YES_NO_OPTION);
+
+        if (respuesta == JOptionPane.YES_OPTION) {
+
+            for (int i = 0; i < listaLibros.size(); i++) {
+                if (listaLibros.get(i)[2].toString().equals(isbn)) {
+                    listaLibros.remove(i);
+                    break;
+                }
+            }
+
+            refrescarTabla(listaLibros);
+        }
     }
 
     private void filtrarPorAutor() {
