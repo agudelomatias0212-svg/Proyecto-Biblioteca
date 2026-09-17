@@ -2,6 +2,8 @@ import javax.swing.*;
 import java.awt.*;
 import javax.swing.table.DefaultTableModel;
 import java.util.ArrayList;
+import java.text.Normalizer;
+import java.time.Year;
 
 
 public class VentanaPrincipal extends JFrame {
@@ -28,14 +30,14 @@ public class VentanaPrincipal extends JFrame {
         listaLibros = new ArrayList<>();
 
         JPanel panelFormulario = new JPanel(new GridLayout(3, 4, 8, 8));
-        panelFormulario.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        panelFormulario.setBorder(BorderFactory.createTitledBorder("Datos del libro"));
 
         JPanel panelTabla = new JPanel();
         panelTabla.setLayout(new BorderLayout());
+        panelTabla.setBorder(BorderFactory.createTitledBorder("Catalogo"));
 
         JPanel panelBotones = new JPanel();
-        panelBotones.setBackground(Color.ORANGE);
-        panelBotones.setPreferredSize(new Dimension(800, 60));
+        panelBotones.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
 
         panelFormulario.add(new JLabel("Titulo:"));
         txtTitulo = new JTextField();
@@ -85,6 +87,8 @@ public class VentanaPrincipal extends JFrame {
 
         modeloTabla = new DefaultTableModel(columnas, 0);
         tablaLibros = new JTable(modeloTabla);
+        tablaLibros.setRowHeight(22);
+        tablaLibros.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         JScrollPane scrollTabla = new JScrollPane(tablaLibros);
 
         panelTabla.add(scrollTabla, BorderLayout.CENTER);
@@ -103,12 +107,41 @@ public class VentanaPrincipal extends JFrame {
 
     private void agregarLibro() {
 
-        String titulo = txtTitulo.getText();
-        String autor = txtAutor.getText();
-        String isbn = txtIsbn.getText();
-        String genero = txtGenero.getText();
-        int ano = Integer.parseInt(txtAno.getText());
-        int copias = Integer.parseInt(txtCopias.getText());
+        String titulo = txtTitulo.getText().trim();
+        String autor = txtAutor.getText().trim();
+        String isbn = txtIsbn.getText().trim();
+        String genero = txtGenero.getText().trim();
+        String textoAno = txtAno.getText().trim();
+        String textoCopias = txtCopias.getText().trim();
+
+        if (titulo.isEmpty() || autor.isEmpty() || isbn.isEmpty()
+                || genero.isEmpty() || textoAno.isEmpty() || textoCopias.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Debes llenar todos los campos");
+            return;
+        }
+
+        int ano;
+        int copias;
+
+        try {
+            ano = Integer.parseInt(textoAno);
+            copias = Integer.parseInt(textoCopias);
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(this, "El año y las copias deben ser numeros enteros");
+            return;
+        }
+
+        int anoActual = Year.now().getValue();
+
+        if (ano > anoActual) {
+            JOptionPane.showMessageDialog(this, "El año no puede ser mayor a " + anoActual);
+            return;
+        }
+
+        if (copias < 0) {
+            JOptionPane.showMessageDialog(this, "Las copias no pueden ser un numero negativo");
+            return;
+        }
 
         listaLibros.add(new Object[]{titulo, autor, isbn, genero, ano, copias});
 
@@ -156,15 +189,25 @@ public class VentanaPrincipal extends JFrame {
 
     private void filtrarPorAutor() {
 
-        String autorBuscado = txtBuscarAutor.getText().toLowerCase();
+        String autorBuscado = sinTildes(txtBuscarAutor.getText().toLowerCase().trim());
+
+        if (autorBuscado.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Escribe un autor para poder filtrar");
+            return;
+        }
 
         ArrayList<Object[]> encontrados = new ArrayList<>();
 
         for (Object[] libro : listaLibros) {
-            String autor = libro[1].toString().toLowerCase();
+            String autor = sinTildes(libro[1].toString().toLowerCase());
             if (autor.contains(autorBuscado)) {
                 encontrados.add(libro);
             }
+        }
+
+        if (encontrados.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No hay libros de ese autor");
+            return;
         }
 
         refrescarTabla(encontrados);
@@ -182,5 +225,10 @@ public class VentanaPrincipal extends JFrame {
         for (Object[] libro : lista) {
             modeloTabla.addRow(libro);
         }
+    }
+
+    private String sinTildes(String texto) {
+        String normalizado = Normalizer.normalize(texto, Normalizer.Form.NFD);
+        return normalizado.replaceAll("[^\\p{ASCII}]", "");
     }
 }
