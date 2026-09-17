@@ -67,4 +67,23 @@ public class Biblioteca {
 
                 return librosFiltrados;
         }
+
+        public void eliminarlibro(String codigo) {
+                for (Libro libro : libros) {
+                        String autor = libro.getAutor();
+                        libros.remove(libro);
+                        codigosRegistrados.remove(codigo);
+
+                        ArrayList<Libro> librosAutor = librosPorAutor.get(autor);
+
+                        if (librosAutor != null) {
+                                librosAutor.remove(libro);
+
+                                if (librosAutor.isEmpty()) {
+                                        librosPorAutor.remove(autor);
+                                }
+                        }
+                        break;
+                }
+        }
 }
