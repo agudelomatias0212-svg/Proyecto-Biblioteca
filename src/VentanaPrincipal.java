@@ -2,8 +2,6 @@ import javax.swing.*;
 import java.awt.*;
 import javax.swing.table.DefaultTableModel;
 import java.util.ArrayList;
-import java.text.Normalizer;
-import java.time.Year;
 
 
 public class VentanaPrincipal extends JFrame {
@@ -14,10 +12,10 @@ public class VentanaPrincipal extends JFrame {
     private JTextField txtTitulo, txtAutor, txtIsbn, txtGenero, txtAno, txtCopias;
     private JButton btnAgregar, btnEliminar;
 
-    private JTextField txtBuscarAutor;
+    private JComboBox<String> comboAutores;
     private JButton btnFiltrar, btnVerTodos;
 
-    private ArrayList<Object[]> listaLibros;
+    private Biblioteca biblioteca;
 
     public VentanaPrincipal() {
         setTitle("Biblioteca municipal");
@@ -27,7 +25,7 @@ public class VentanaPrincipal extends JFrame {
 
         setLayout(new BorderLayout());
 
-        listaLibros = new ArrayList<>();
+        biblioteca = new Biblioteca();
 
         JPanel panelFormulario = new JPanel(new GridLayout(3, 4, 8, 8));
         panelFormulario.setBorder(BorderFactory.createTitledBorder("Datos del libro"));
@@ -71,9 +69,9 @@ public class VentanaPrincipal extends JFrame {
         btnEliminar.addActionListener(e -> eliminarLibro());
         panelBotones.add(btnEliminar);
 
-        panelBotones.add(new JLabel("Buscar por autor:"));
-        txtBuscarAutor = new JTextField(15);
-        panelBotones.add(txtBuscarAutor);
+        panelBotones.add(new JLabel("Autor:"));
+        comboAutores = new JComboBox<>();
+        panelBotones.add(comboAutores);
 
         btnFiltrar = new JButton("Filtrar");
         btnFiltrar.addActionListener(e -> filtrarPorAutor());
@@ -93,11 +91,12 @@ public class VentanaPrincipal extends JFrame {
 
         panelTabla.add(scrollTabla, BorderLayout.CENTER);
 
-        listaLibros.add(new Object[]{"Cien años de soledad", "Gabriel García Márquez", "9780307474728", "Novela", 1967, 3});
-        listaLibros.add(new Object[]{"El coronel no tiene quien le escriba", "Gabriel García Márquez", "9780307475473", "Novela", 1961, 2});
-        listaLibros.add(new Object[]{"La vorágine", "José Eustasio Rivera", "9789583001093", "Novela", 1924, 1});
+        biblioteca.agregarlibro(new Libro("Cien años de soledad", "Gabriel García Márquez", "9780307474728", "Novela", 1967, 3));
+        biblioteca.agregarlibro(new Libro("El coronel no tiene quien le escriba", "Gabriel García Márquez", "9780307475473", "Novela", 1961, 2));
+        biblioteca.agregarlibro(new Libro("La vorágine", "José Eustasio Rivera", "9789583001093", "Novela", 1924, 1));
 
-        refrescarTabla(listaLibros);
+        refrescarTabla(biblioteca.obtenerTodos());
+        actualizarComboAutores();
 
         add(panelFormulario, BorderLayout.NORTH);
         add(panelTabla, BorderLayout.CENTER);
@@ -131,21 +130,20 @@ public class VentanaPrincipal extends JFrame {
             return;
         }
 
-        int anoActual = Year.now().getValue();
+        Libro libro = new Libro(titulo, autor, isbn, genero, ano, copias);
 
-        if (ano > anoActual) {
-            JOptionPane.showMessageDialog(this, "El año no puede ser mayor a " + anoActual);
+        boolean agregado = biblioteca.agregarlibro(libro);
+
+        if (!agregado) {
+            JOptionPane.showMessageDialog(this,
+                    "No se pudo agregar el libro.\n"
+                            + "Revisa que el año sea valido, que las copias no sean negativas\n"
+                            + "y que el ISBN no este registrado ya.");
             return;
         }
 
-        if (copias < 0) {
-            JOptionPane.showMessageDialog(this, "Las copias no pueden ser un numero negativo");
-            return;
-        }
-
-        listaLibros.add(new Object[]{titulo, autor, isbn, genero, ano, copias});
-
-        refrescarTabla(listaLibros);
+        refrescarTabla(biblioteca.obtenerTodos());
+        actualizarComboAutores();
 
         txtTitulo.setText("");
         txtAutor.setText("");
@@ -167,7 +165,7 @@ public class VentanaPrincipal extends JFrame {
         }
 
         String titulo = modeloTabla.getValueAt(fila, 0).toString();
-        String isbn = modeloTabla.getValueAt(fila, 2).toString();
+        String codigo = modeloTabla.getValueAt(fila, 2).toString();
 
         int respuesta = JOptionPane.showConfirmDialog(this,
                 "Seguro que quieres eliminar: " + titulo + "?",
@@ -176,59 +174,61 @@ public class VentanaPrincipal extends JFrame {
 
         if (respuesta == JOptionPane.YES_OPTION) {
 
-            for (int i = 0; i < listaLibros.size(); i++) {
-                if (listaLibros.get(i)[2].toString().equals(isbn)) {
-                    listaLibros.remove(i);
-                    break;
-                }
-            }
+            biblioteca.eliminarlibro(codigo);
 
-            refrescarTabla(listaLibros);
+            refrescarTabla(biblioteca.obtenerTodos());
+            actualizarComboAutores();
         }
     }
 
     private void filtrarPorAutor() {
 
-        String autorBuscado = sinTildes(txtBuscarAutor.getText().toLowerCase().trim());
+        String autor = (String) comboAutores.getSelectedItem();
 
-        if (autorBuscado.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Escribe un autor para poder filtrar");
+        if (autor == null || autor.equals("(Todos)")) {
+            refrescarTabla(biblioteca.obtenerTodos());
             return;
         }
 
-        ArrayList<Object[]> encontrados = new ArrayList<>();
-
-        for (Object[] libro : listaLibros) {
-            String autor = sinTildes(libro[1].toString().toLowerCase());
-            if (autor.contains(autorBuscado)) {
-                encontrados.add(libro);
-            }
-        }
-
-        if (encontrados.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No hay libros de ese autor");
-            return;
-        }
-
-        refrescarTabla(encontrados);
+        refrescarTabla(biblioteca.filtrarPorAutor(autor));
     }
 
     private void verTodos() {
-        txtBuscarAutor.setText("");
-        refrescarTabla(listaLibros);
+        comboAutores.setSelectedIndex(0);
+        refrescarTabla(biblioteca.obtenerTodos());
     }
 
-    private void refrescarTabla(ArrayList<Object[]> lista) {
+    private void refrescarTabla(ArrayList<Libro> lista) {
 
         modeloTabla.setRowCount(0);
 
-        for (Object[] libro : lista) {
-            modeloTabla.addRow(libro);
+        for (Libro libro : lista) {
+            modeloTabla.addRow(new Object[]{
+                    libro.getTitulo(),
+                    libro.getAutor(),
+                    libro.getCodigo(),
+                    libro.getGenero(),
+                    libro.getañopublicado(),
+                    libro.getcopiasDisponibles()
+            });
         }
     }
 
-    private String sinTildes(String texto) {
-        String normalizado = Normalizer.normalize(texto, Normalizer.Form.NFD);
-        return normalizado.replaceAll("[^\\p{ASCII}]", "");
+    private void actualizarComboAutores() {
+
+        comboAutores.removeAllItems();
+        comboAutores.addItem("(Todos)");
+
+        ArrayList<String> autores = new ArrayList<>();
+
+        for (Libro libro : biblioteca.obtenerTodos()) {
+            if (!autores.contains(libro.getAutor())) {
+                autores.add(libro.getAutor());
+            }
+        }
+
+        for (String autor : autores) {
+            comboAutores.addItem(autor);
+        }
     }
 }
